@@ -1,0 +1,191 @@
+---
+title: "Project 1 - Question 1"
+output:
+  html_document: default
+  pdf_document: default
+author: Maryam Bahojb Imani
+---
+# Authors: Azadeh Samadian, Maryam Bahojb Imani
+
+# Reading data from the file 
+
+```{r , echo=TRUE}
+mydata <- read.table("token/networkomisegoTX.txt", header=FALSE, 
+  	sep=" ",  col.names= c("fromNodeID", "toNodeID", "unixTime", "tokenAmount"), colClasses=c('factor', 'factor', 'numeric', 'numeric') )
+summary(mydata)
+```
+# Outlier
+
+```{r , echo=TRUE}
+maxTotalSupply<-140245398
+subUnit<-10^18
+outlier_value <- maxTotalSupply*subUnit
+outlierData <- mydata [which(mydata$tokenAmount > outlier_value),]
+#head(outlierData)
+#library("dplyr")
+#filter(mydata, tokenAmount < outlier_value)
+message("Total Number of Outliers: ", length(outlierData$tokenAmount))
+```
+
+## Number of users that included in outliers transactions: 
+```{r , echo=TRUE}
+users <- c(outlierData$fromNodeID, outlierData$toNodeID)
+uniqueUsers <- unique(users)
+message(length(uniqueUsers), " users are included in outliers transactions.")
+```
+## Remove outliers:
+```{r , echo=TRUE}
+withoutOutlierData <- mydata [which(mydata$tokenAmount < outlier_value),]
+
+```
+
+# Finding the frequency of each seller 
+
+```{r , echo=TRUE}
+w <- table(withoutOutlierData$fromNodeID)
+Seller <- as.data.frame(w)
+names(Seller)[1] <- 'Seller'
+head(Seller)
+```
+# Finding the frequncy of frequency of sellers
+```{r, echo=TRUE}
+w2 <- table(Seller$Freq)
+FreqSeller <-as.data.frame(w2)
+colnames(FreqSeller) <- c("NumSeller", "FreqNumSeller")
+head(FreqSeller)
+barplot(FreqSeller$FreqNumSeller, names.arg = FreqSeller$NumSeller, ylab = "frequency of Number of Seller", xlab="Frequency", xlim = c(0, 50))
+```
+
+```{r, echo= TRUE}
+
+library(fitdistrplus)
+library(logspline)
+
+descdist(FreqSeller$FreqNumSeller, discrete = FALSE)
+```
+```{r, echo=TRUE}
+plotdist(FreqSeller$FreqNumSeller, histo = TRUE, demp = TRUE)
+
+```
+### Testing Normal Distribution 
+```{r, echo = TRUE}
+fit.norm <- fitdist(FreqSeller$FreqNumSeller, "norm")
+plot(fit.norm)
+fit.norm
+```
+### Testing Log-Normal Distribution 
+```{r, echo = TRUE}
+fit.lnorm <- fitdist(FreqSeller$FreqNumSeller, "lnorm")
+plot(fit.lnorm)
+fit.lnorm
+```
+### Testing Poisson distribution 
+```{r, echo= TRUE}
+fit.pois <- fitdist(FreqSeller$FreqNumSeller, "pois", method = "mle")
+plot(fit.pois)
+fit.pois
+```
+### Testing Negative Binomial Distribution 
+```{r, echo= TRUE}
+fit.nb <- fitdist(FreqSeller$FreqNumSeller, "nbinom")
+plot(fit.nb)
+fit.nb
+```
+### Testing Weibull distribution 
+```{r, echo= TRUE}
+fit.weibull <- fitdist(FreqSeller$FreqNumSeller, "weibull")
+plot(fit.weibull)
+fit.weibull
+```
+### Testing Exponential Distribution 
+```{r, echo= TRUE}
+fit.exp <- fitdist(FreqSeller$FreqNumSeller, "exp", method="mme")
+plot(fit.exp)
+fit.exp
+```
+### Comparision between different disribtions 
+```{r, echo= TRUE}
+par(mfrow=c(2,2))
+plot.legend <- c("Weibull", "lognormal", "poisson", "Exponential")
+denscomp(list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+cdfcomp (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+qqcomp  (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+ppcomp  (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+```
+
+# Finding the frequency of each buyer 
+
+```{r , echo=TRUE}
+w <- table(withoutOutlierData$toNodeID)
+Buyer <- as.data.frame(w)
+names(Buyer)[1] <- 'Buyer'
+head(Buyer)
+```
+# Finding the frequncy of frequency of buyers
+```{r, echo=TRUE}
+w2 <- table(Buyer$Freq)
+FreqBuyer <-as.data.frame(w2)
+colnames(FreqBuyer) <- c("NumBuyer", "FreqNumBuyer")
+head(FreqBuyer)
+barplot(FreqBuyer$FreqNumBuyer, names.arg = FreqBuyer$NumBuyer, ylab = "frequency of Number of Buyer", xlab="Frequency", xlim = c(0, 50))
+```
+
+```{r, echo= TRUE}
+library(fitdistrplus)
+library(logspline)
+
+descdist(FreqBuyer$FreqNumBuyer, discrete = FALSE)
+```
+```{r, echo=TRUE}
+plotdist(FreqBuyer$FreqNumBuyer, histo = TRUE, demp = TRUE)
+
+```
+### Testing Normal Distribution 
+```{r, echo = TRUE}
+fit.norm <- fitdist(FreqBuyer$FreqNumBuyer, "norm")
+plot(fit.norm)
+fit.norm
+```
+### Testing Log-Normal Distribution 
+```{r, echo = TRUE}
+fit.lnorm <- fitdist(FreqBuyer$FreqNumBuyer, "lnorm")
+plot(fit.lnorm)
+fit.lnorm
+```
+
+### Testing Poisson Distribution 
+```{r, echo= TRUE}
+fit.pois <- fitdist(FreqBuyer$FreqNumBuyer, "pois", method = "mle")
+plot(fit.pois)
+fit.pois
+```
+### Testing Negative Binomial Distribution
+```{r, echo= TRUE}
+fit.nb <- fitdist(FreqBuyer$FreqNumBuyer, "nbinom")
+plot(fit.nb)
+fit.nb
+```
+### Testing Weibull Distribution 
+```{r, echo= TRUE}
+fit.weibull <- fitdist(FreqBuyer$FreqNumBuyer, "weibull")
+plot(fit.weibull)
+fit.weibull
+```
+### Testing exp Distribution 
+```{r, echo= TRUE}
+fit.exp <- fitdist(FreqBuyer$FreqNumBuyer, "exp", method="mme")
+plot(fit.exp)
+fit.exp
+```
+
+### Comparision between different disribtions 
+```{r, echo= TRUE}
+par(mfrow=c(2,2))
+plot.legend <- c("Weibull", "lognormal", "poisson", "exponential")
+denscomp(list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+cdfcomp (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+qqcomp  (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+ppcomp  (list(fit.weibull, fit.lnorm, fit.pois, fit.exp), legendtext = plot.legend)
+```
+
+We guess both of buyers and sellers frequency can fit with Exponential distributions. 

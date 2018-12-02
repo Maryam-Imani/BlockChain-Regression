@@ -1,0 +1,255 @@
+---
+title: "Question1-2"
+author: "Maryam Imani, Azadeh Samadian"
+date: "October 23, 2018"
+output: html_document
+---
+
+```{r , echo=TRUE}
+mydata <- read.table("token/networkomisegoTX.txt", header=FALSE, 
+  	sep=" ",  col.names= c("fromNodeID", "toNodeID", "unixTime", "tokenAmount"), colClasses=c('factor', 'factor', 'numeric', 'numeric') )
+
+library(anytime)
+mydata$newDate <- anydate(mydata$unixTime)
+df <- as.data.frame.matrix(mydata) 
+head(mydata)
+```
+
+```{r , echo=TRUE}
+mydata2 <- read.table("tokenPrices/OMISEGO", header=TRUE, 
+  	sep="\t",  col.names= c("Date",	"Open",	"High"	,"Low"	,"Close",	"Volume",	"MarketCap"), colClasses=c('factor', 'numeric', 'numeric','numeric', 'numeric', 'numeric', 'numeric') )
+mydata2$newDate <- as.Date(strptime(x = as.character(mydata2$Date), format = "%m/%d/%Y"))
+df_set2 <- as.data.frame.matrix(mydata2) 
+head(mydata2)
+
+```
+
+# Outlier
+
+```{r , echo=TRUE}
+maxTotalSupply<-140245398
+subUnit<-10^18
+outlier_value <- maxTotalSupply*subUnit
+outlierData <- mydata [which(mydata$tokenAmount > outlier_value),]
+#outlierData2 <- mydata [which(mydata$tokenAmount < 1.0e+16),]
+#head(outlierData)
+#library("dplyr")
+#filter(mydata, tokenAmount < outlier_value)
+message("Total Number of Outliers: ", length(outlierData$tokenAmount) )
+```
+
+## Number of users that included in outliers transactions: 
+```{r , echo=TRUE}
+users <- c(outlierData$fromNodeID, outlierData$toNodeID)
+uniqueUsers <- unique(users)
+message(length(uniqueUsers), " users are included in outliers transactions.")
+```
+## Remove outliers:
+```{r , echo=TRUE}
+withoutOutlierData <- mydata [which(mydata$tokenAmount < outlier_value),]
+withoutOutlierData <- withoutOutlierData [which(withoutOutlierData$tokenAmount > 1.000000e+17),]
+
+cleanDF <- as.data.frame.matrix(withoutOutlierData) 
+
+```
+
+## Take sample from population
+```{r, echo = TRUE}
+
+#cleanDF[sample(nrow(cleanDF),size=1000,replace=TRUE),]
+
+```
+
+##find max and min
+```{r , echo=TRUE}
+library('anytime')
+minimum <- min(cleanDF$tokenAmount, na.rm=TRUE)
+cleanDF$NewAmount <- cleanDF$tokenAmount / minimum # Normalizing the tokenAmount (we can ignore this part)
+
+cleanDF <- cleanDF[order(cleanDF$NewAmount),]
+
+minimum <- min(cleanDF$NewAmount, na.rm=TRUE)
+maximum<-max(cleanDF$NewAmount, na.rm=TRUE)
+message("maximum amount is: ", maximum )
+numOfLayers <- 3
+layerWidth <- maximum/numOfLayers
+
+#cleanDF$layers <- cut(cleanDF$NewAmount, c(minimum:maximum , layerWidth))
+head(cleanDF)
+
+```
+
+## finding layers and correlation 
+
+```{r, echo = TRUE}
+# In this part, we used frequncy of transaction per date as a feature. Then, we found the corrolation of this feature and the amount of close date. 
+
+minimum <- min(cleanDF$tokenAmount, na.rm=TRUE)
+maximum<-max(cleanDF$tokenAmount, na.rm=TRUE)
+
+x2 <- minimum
+layerNum <- 0
+resultVec <- c()
+xlabel <-c()
+
+while ( x2*2<maximum) {
+  
+  x1 <- x2
+  x2 <- x2 * 2
+  
+  df2 <- subset(cleanDF, cleanDF$tokenAmount >= x1 & cleanDF$tokenAmount < x2  , select=c(newDate))
+  freqCountDF <- data.frame(table(df2$newDate))
+  
+  if(nrow(freqCountDF) > 2){
+    
+    layerNum <- layerNum +1
+    
+    # Counting the frequency of dates in the first dataset
+    colnames(freqCountDF) <- c("newDate", "Freq")
+  
+    # merging two datasets together to find Closing amount in a given date
+    mergeDF <- subset(merge(freqCountDF,df_set2,by="newDate"), select=c(Freq, Close))
+    
+    # Counting the corrolation between closing amount and frequency of transaction per date
+    resultVec[layerNum] <- cor(mergeDF$Freq, mergeDF$Close, method = "pearson")
+    
+    xlabel[layerNum] <- paste0(layerNum , ": ", x1, "< tokenAmount < " , x2 , "  Cor=", resultVec[layerNum] )
+  }
+}
+barplot( resultVec, names.arg=c(1:length(resultVec)), xlab = "Layer", ylab = "Correlation")
+print(xlabel)
+
+```
+
+```{r, echo = TRUE}
+# In this part, we used frequncy of transaction per date as a feature. Then, we found the corrolation of this feature and the amount of close date. 
+
+minimum <- min(cleanDF$tokenAmount, na.rm=TRUE)
+maximum<-max(cleanDF$tokenAmount, na.rm=TRUE)
+
+y <- maximum
+x2 <- minimum
+layerNum <- 0
+resultVec <- c()
+xlabel <-c()
+
+while ( x2*10<maximum) {
+  
+
+  x1 <- x2
+  x2 <- x2 * 10
+  
+  df2 <- subset(cleanDF, cleanDF$tokenAmount >= x1 & cleanDF$tokenAmount < x2  , select=c(newDate))
+  freqCountDF <- data.frame(table(df2$newDate))
+  
+  if(nrow(freqCountDF) > 2){
+    
+    layerNum <- layerNum +1
+    
+    # Counting the frequency of dates in the first dataset
+    colnames(freqCountDF) <- c("newDate", "Freq")
+  
+    # merging two datasets together to find Closing amount in a given date
+    mergeDF <- subset(merge(freqCountDF,df_set2,by="newDate"), select=c(Freq, Close))
+    
+    # Counting the corrolation between closing amount and frequency of transaction per date
+    resultVec[layerNum] <- cor(mergeDF$Freq, mergeDF$Close, method = "pearson")
+    
+    xlabel[layerNum] <- paste0(layerNum , ": ", x1, "< tokenAmount < " , x2 , "  Cor=", resultVec[layerNum] )
+    
+  }
+}
+barplot( resultVec, names.arg=c(1:length(resultVec)), xlab = "Layer", ylab = "Correlation")
+print(xlabel)
+```
+### Cumalitive Correlation 
+
+
+```{r, echo = TRUE}
+# In this part, we used frequncy of transaction per date as a feature. Then, we found the corrolation of this feature and the amount of close date. 
+
+minimum <- min(cleanDF$tokenAmount, na.rm=TRUE)
+maximum<-max(cleanDF$tokenAmount, na.rm=TRUE)
+
+x2 <- minimum
+layerNum <- 0
+resultVec <- c()
+
+xlabel <-c()
+
+while ( x2*2<maximum) {
+  
+  x1 <- x2
+  x2 <- x2 * 2
+  
+  df2 <- subset(cleanDF, cleanDF$tokenAmount < x2  , select=c(newDate))
+  
+  
+  freqCountDF <- data.frame(table(df2$newDate))
+  
+  if(nrow(freqCountDF) > 2){
+    
+    layerNum <- layerNum + 1
+    
+    
+    # Counting the frequency of dates in the first dataset
+    colnames(freqCountDF) <- c("newDate", "Freq")
+  
+    # merging two datasets together to find Closing amount in a given date
+    mergeDF <- subset(merge(freqCountDF,df_set2,by="newDate"), select=c(Freq, Close))
+    
+    # Counting the corrolation between closing amount and frequency of transaction per date
+    resultVec[layerNum] <- cor(mergeDF$Freq, mergeDF$Close, method = "pearson")
+    
+    xlabel[layerNum] <- paste0(layerNum , ": tokenAmount < " , x2 , "  Cor=", resultVec[layerNum] )
+    print(xlabel[layerNum])
+  }
+}
+barplot( resultVec, names.arg=c(1:length(resultVec)), xlab = "Layer", ylab = "Cumilitive Correlation")
+print(xlabel)
+```
+
+
+```{r, echo = TRUE}
+# In this part, we used frequncy of transaction per date as a feature. Then, we found the corrolation of this feature and the amount of close date. 
+
+minimum <- min(cleanDF$tokenAmount, na.rm=TRUE)
+maximum<-max(cleanDF$tokenAmount, na.rm=TRUE)
+
+y <- maximum
+x2 <- minimum
+layerNum <- 0
+resultVec <- c()
+
+xlabel <-c()
+
+while ( x2*10<maximum) {
+  
+  x1 <- x2
+  x2 <- x2 * 10
+  
+  df2 <- subset(cleanDF, cleanDF$tokenAmount < x2  , select=c(newDate))
+  
+  freqCountDF <- data.frame(table(df2$newDate))
+  
+  if(nrow(freqCountDF) > 2){
+    
+    layerNum <- layerNum + 1
+    
+    
+    # Counting the frequency of dates in the first dataset
+    colnames(freqCountDF) <- c("newDate", "Freq")
+  
+    # merging two datasets together to find Closing amount in a given date
+    mergeDF <- subset(merge(freqCountDF,df_set2,by="newDate"), select=c(Freq, Close))
+    
+    # Counting the corrolation between closing amount and frequency of transaction per date
+    resultVec[layerNum] <- cor(mergeDF$Freq, mergeDF$Close, method = "pearson")
+    
+    xlabel[layerNum] <- paste0(layerNum , ": tokenAmount < " , x2 , "  Cor=", resultVec[layerNum] )
+  }
+}
+barplot( resultVec, names.arg=c(1:length(resultVec)), xlab = "Layer", ylab = "Cumilitive Correlation")
+print(xlabel)
+```
+
