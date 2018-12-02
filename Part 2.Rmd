@@ -1,5 +1,5 @@
 ---
-title: "Question1-2"
+title: "Question 2"
 author: "Maryam Imani, Azadeh Samadian"
 date: "October 23, 2018"
 output: html_document
