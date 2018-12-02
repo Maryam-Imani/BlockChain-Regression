@@ -1,6 +1,6 @@
 ---
-title: "Question 2-1"
-author: "Maryam Imani"
+title: "Question 3"
+author: "Maryam Imani" , "Azadeh Samadian"
 date: "December 1, 2018"
 output: html_document
 ---
