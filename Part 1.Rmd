@@ -3,9 +3,8 @@ title: "Project 1 - Question 1"
 output:
   html_document: default
   pdf_document: default
-author: Maryam Bahojb Imani
+  author: Maryam Imani, Azadeh Samadian
 ---
-# Authors: Azadeh Samadian, Maryam Bahojb Imani
 
 # Reading data from the file 
 
